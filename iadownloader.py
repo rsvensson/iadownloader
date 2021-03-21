@@ -3,11 +3,12 @@ import json
 import os
 import requests
 import sys
+import time
+from datetime import datetime
 from lxml import html
 from tqdm import tqdm
 
 dlurl = "https://archive.org/download/"
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -113,12 +114,15 @@ def download(url: str, output_dir: str):
         total_size = int(r.headers.get("content-length", 0))
         block_size = 8192
         progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
+        mod_time = time.mktime(datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z").timetuple())
         mode = "wb" if resume_pos == 0 else "ab"
         with open(filename, mode) as fd:
             for block in r.iter_content(block_size):
                 progress_bar.update(len(block))
                 fd.write(block)
         progress_bar.close()
+    # Set last modified time
+    os.utime(filename, (mod_time, mod_time))
 
 
 def main():
