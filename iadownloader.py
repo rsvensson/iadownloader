@@ -26,7 +26,7 @@ def parse_args():
 
 def json2list(path: str) -> list:
     """
-    Parses a json file from IA's advanced search into a list of identifiers.
+    Parses a json file from IA's advanced search into a list of urls.
     :param path: Path to the json file.
     :return: List of download urls.
     """
