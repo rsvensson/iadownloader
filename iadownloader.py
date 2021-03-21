@@ -114,7 +114,10 @@ def download(url: str, output_dir: str):
         total_size = int(r.headers.get("content-length", 0))
         block_size = 8192
         progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
-        mod_time = time.mktime(datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z").timetuple())
+        try:  # Try getting last modified time
+            mod_time = time.mktime(datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z").timetuple())
+        except TypeError:
+            mod_time = time.mktime(datetime.now().timetuple())
         mode = "wb" if resume_pos == 0 else "ab"
         with open(filename, mode) as fd:
             for block in r.iter_content(block_size):
