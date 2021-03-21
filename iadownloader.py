@@ -109,7 +109,7 @@ def download(url: str, output_dir: str):
     print(f"Downloading \"{filename.split('/')[-1]}\"")
     if resume_pos > 0:
         print(f"Resuming download at {resume_pos} bytes.")
-    with requests.get(url, stream=True, headers={"Range": "bytes=%d-" % resume_pos}) as r:
+    with requests.get(url, stream=True, headers={"Range": f"bytes={resume_pos}-"}) as r:
         r.raise_for_status()
         total_size = int(r.headers.get("content-length", 0))
         block_size = 8192
