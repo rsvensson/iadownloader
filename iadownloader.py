@@ -6,14 +6,13 @@ import sys
 from lxml import html
 from tqdm import tqdm
 
-scriptdir = os.path.dirname(os.path.realpath(__file__))
 dlurl = "https://archive.org/download/"
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="URL or path to json/csv file")
-    parser.add_argument("-o", "--output_dir", help="Path to output directory.", default=".")
+    parser.add_argument("-o", "--output_dir", help="Path to output directory.", default=os.getcwd())
 
     args = parser.parse_args()
 
