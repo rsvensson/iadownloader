@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
+from dlthread import DownloadThread
+
 import argparse
 import json
 import os
 import requests
 import sys
-import time
-from datetime import datetime
 from lxml import html
-from tqdm import tqdm
+from queue import Queue
+
 
 dlurl = "https://archive.org/download/"
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -93,41 +95,16 @@ def get_download_links(url: str) -> list:
     return links
 
 
-def download(url: str, output_dir: str):
-    filename = output_dir + "/" + requests.utils.unquote((url.split("/")[-1]))
+def download(urls: list, output_dir: str, numthreads: int = 4):
+    queue = Queue()
+    for url in urls:
+        queue.put(url)
 
-    # Handle resuming a download
-    resume_pos = 0
-    if os.path.exists(filename):
-        header = requests.head(url, allow_redirects=True)
-        remote_size = int(header.headers.get("content-length", 0))
-        local_size = os.path.getsize(filename)
-        if local_size == remote_size and local_size > 0:
-            print(f"{filename.split('/')[-1]} already downloaded. Skipping.")
-            return
-        else:
-            resume_pos = local_size
+    for i in range(numthreads):
+        t = DownloadThread(queue, output_dir)
+        t.start()
 
-    print(f"Downloading \"{filename.split('/')[-1]}\"")
-    if resume_pos > 0:
-        print(f"Resuming download at {resume_pos} bytes.")
-    with requests.get(url, stream=True, headers={"Range": f"bytes={resume_pos}-"}) as r:
-        r.raise_for_status()
-        total_size = int(r.headers.get("content-length", 0))
-        block_size = 8192
-        progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
-        try:  # Try getting last modified time
-            mod_time = time.mktime(datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z").timetuple())
-        except TypeError:
-            mod_time = time.mktime(datetime.now().timetuple())
-        mode = "wb" if resume_pos == 0 else "ab"
-        with open(filename, mode) as fd:
-            for block in r.iter_content(block_size):
-                progress_bar.update(len(block))
-                fd.write(block)
-        progress_bar.close()
-    # Set last modified time
-    os.utime(filename, (mod_time, mod_time))
+    queue.join()
 
 
 def main():
@@ -136,8 +113,7 @@ def main():
 
     if args.url.startswith("http://") or args.url.startswith("https://"):
         links = get_download_links(args.url)
-        for link in links:
-            download(link, args.output_dir)
+        download(links, args.output_dir)
         return
     elif args.url.endswith(".csv"):
         urls = csv2list(args.url)
@@ -151,8 +127,7 @@ def main():
        dlpath = os.path.join(args.output_dir, url.split("/")[-1])
        os.makedirs(dlpath, exist_ok=True)
        links = get_download_links(url)
-       for link in links:
-           download(link, dlpath)
+       download(links, dlpath)
 
 if __name__ == "__main__":
     main()
