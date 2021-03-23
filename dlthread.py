@@ -25,25 +25,29 @@ class DownloadThread(threading.Thread):
                 print(f"Error: {e}")
             self.queue.task_done()
 
-    def download_url(self, url):
+    def download_url(self, url: str):
         filename = requests.utils.unquote(url.split("/")[-1])
+        if url.find("/compress/") != -1:
+            # User requested the compressed archive
+            filename += ".zip"
         dlpath = os.path.join(self.output_dir, filename)
 
         # Handle resuming a download
         resume_pos = 0
         if os.path.exists(dlpath):
-            header = requests.head(url, allow_redirects=True)
-            remote_size = int(header.headers.get("content-length", 0))
-            local_size = os.path.getsize(dlpath)
-            if local_size == remote_size and local_size > 0:
-                print(f"{filename} already downloaded. Skipping.\n")
-                return
-            else:
-                resume_pos = local_size
+            with requests.get(url, stream=True, allow_redirects=True) as r:
+                remote_size = int(r.headers.get("content-length", 0))
+                local_size = os.path.getsize(dlpath)
+                if local_size == remote_size and local_size > 0:
+                    print(f"{filename} already downloaded. Skipping.\n")
+                    return
+                else:
+                    resume_pos = local_size
 
         if resume_pos > 0:
             print(f"Resuming download at {resume_pos} bytes.")
-        with requests.get(url, stream=True, headers={"Range": f"bytes={resume_pos}-"}) as r:
+        with requests.get(url, stream=True, allow_redirects=True,
+                          headers={"Range": f"bytes={resume_pos}-"}) as r:
             r.raise_for_status()
             total_size = int(r.headers.get("content-length", 0))
             block_size = 8192

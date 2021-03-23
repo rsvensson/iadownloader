@@ -18,12 +18,15 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="URL or path to json/csv file")
     parser.add_argument("-o", "--output_dir", help="Path to output directory.", default=os.getcwd())
+    parser.add_argument("-c", "--compressed",
+                        help="Get the compressed archive download instead of the individual files.",
+                        action="store_true")
 
     args = parser.parse_args()
 
     if not str(args.url).startswith("http://") and not str(args.url).startswith("https://") \
        and not str(args.url).endswith(".json") and not str(args.url).endswith(".csv"):
-        print("Error: Invalid URL.")
+        print("Error: Invalid URL or json/csv file.")
         sys.exit(1)
 
     return args
@@ -74,13 +77,16 @@ def csv2list(path: str) -> list:
     return urls
 
 
-def get_download_links(url: str) -> list:
+def get_download_links(url: str, compressed: bool) -> list:
     """
     Returns the links in a download url.
     """
 
     # Convert the details page to the download page
     url = url.replace("/details/", "/download/")
+
+    if compressed:
+        return [url.replace("/download/", "/compress/")]
 
     page = requests.get(url)
     webpage = html.fromstring(page.content)
@@ -115,7 +121,7 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     if args.url.startswith("http://") or args.url.startswith("https://"):
-        links = get_download_links(args.url)
+        links = get_download_links(args.url, args.compressed)
         download(links, args.output_dir)
         return
     elif args.url.endswith(".csv"):
@@ -127,9 +133,13 @@ def main():
         sys.exit(1)
 
     for url in urls:
-       dlpath = os.path.join(args.output_dir, url.split("/")[-1])
-       os.makedirs(dlpath, exist_ok=True)
-       links = get_download_links(url)
+       if not args.compressed:
+           # Only create subdirs if we want individual files
+           dlpath = os.path.join(args.output_dir, url.split("/")[-1])
+           os.makedirs(dlpath, exist_ok=True)
+       else:
+           dlpath = args.output_dir
+       links = get_download_links(url, args.compressed)
        download(links, dlpath)
 
 if __name__ == "__main__":
