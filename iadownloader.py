@@ -79,6 +79,9 @@ def get_download_links(url: str) -> list:
     Returns the links in a download url.
     """
 
+    # Convert the details page to the download page
+    url = url.replace("/details/", "/download/")
+
     page = requests.get(url)
     webpage = html.fromstring(page.content)
     rawlinks = webpage.xpath("//a/@href")
