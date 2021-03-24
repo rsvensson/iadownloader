@@ -17,10 +17,12 @@ dlurl = "https://archive.org/download/"
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="URL or path to json/csv file")
-    parser.add_argument("-o", "--output_dir", help="Path to output directory.", default=os.getcwd())
     parser.add_argument("-c", "--compressed",
-                        help="Get the compressed archive download instead of the individual files.",
+                        help="Get the compressed archive download instead of the individual files",
                         action="store_true")
+    parser.add_argument("-o", "--output_dir", help="Path to output directory", default=os.getcwd())
+    parser.add_argument("-t", "--threads", help="Number of simultaneous downloads (maximum of 10)",
+                        type=int, default=4)
 
     args = parser.parse_args()
 
@@ -118,11 +120,16 @@ def download(urls: list, output_dir: str, numthreads: int = 4):
 
 def main():
     args = parse_args()
+    threads = args.threads
     os.makedirs(args.output_dir, exist_ok=True)
+
+    if threads > 10:
+        print("Too many threads. Setting to 10.")
+        threads = 10
 
     if args.url.startswith("http://") or args.url.startswith("https://"):
         links = get_download_links(args.url, args.compressed)
-        download(links, args.output_dir)
+        download(links, args.output_dir, threads)
         return
     elif args.url.endswith(".csv"):
         urls = csv2list(args.url)
@@ -140,7 +147,7 @@ def main():
        else:
            dlpath = args.output_dir
        links = get_download_links(url, args.compressed)
-       download(links, dlpath)
+       download(links, dlpath, threads)
 
 if __name__ == "__main__":
     main()
