@@ -34,22 +34,31 @@ class DownloadThread(threading.Thread):
 
     def download_url(self, url: str):
         filename = requests.utils.unquote(url.split("/")[-1])
+        compressed = False
         if url.find("/compress/") != -1:
             # User requested the compressed archive
             filename += ".zip"
+            compressed = True
         dlpath = os.path.join(self.output_dir, filename)
 
         # Handle resuming a download
         resume_pos = 0
         if os.path.exists(dlpath):
             with requests.get(url, stream=True, allow_redirects=True) as r:
-                remote_size = int(r.headers.get("content-length", 0))
                 local_size = os.path.getsize(dlpath)
-                if local_size == remote_size and local_size > 0:
-                    print(f"{filename} already downloaded. Skipping.\n")
-                    return
+                remote_size = int(r.headers.get("content-length", 0))
+                if not compressed:
+                    # The compressed archive's mtime is created at the time of download
+                    local_time = int(os.path.getmtime(dlpath))
+                    remote_time = self._get_mtime_from_str(r.headers.get("last-modified"))
+                    if local_time == remote_time and local_size > 0:
+                        print(f"{filename} already downloaded. Skipping.\n")
+                        return
                 else:
-                    resume_pos = local_size
+                    if local_size == remote_size and local_size > 0:
+                        print(f"{filename} already downloaded. Skipping.\n")
+                        return
+                resume_pos = local_size
 
         if resume_pos > 0:
             print(f"Resuming download at {resume_pos} bytes.")
