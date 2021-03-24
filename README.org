@@ -9,17 +9,18 @@
 
 ** Usage
 #+BEGIN_SRC shell
-iadownloader.py [-h] [-o OUTPUT_DIR] [-c] url
+iadownloader.py [-h] [-c] [-o OUTPUT_DIR] [-t THREADS] url
 
 positional arguments:
   url                   URL or path to json/csv file
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c, --compressed      Get the compressed archive download instead of the individual files
   -o OUTPUT_DIR, --output_dir OUTPUT_DIR
-                        Path to output directory.
-  -c, --compressed      Get the compressed archive download instead of the individual
-                        files.
+                        Path to output directory
+  -t THREADS, --threads THREADS
+                        Number of simultaneous downloads (maximum of 10)
 #+END_SRC
 
 The basic usage is to simply invoke iadownloader with a download url.
@@ -37,6 +38,12 @@ To download the compressed archive of the upload just add the '-c' flag:
 #+BEGIN_SRC shell
 python iadownloader.py -c -o /download/path https://archive.org/download/<url>
 #+END_SRC
+
+You can also specify the amount of threads (up to 10):
+#+BEGIN_SRC shell
+python iadownloader.py -t 8 /download/path https://archive.org/download/<url>
+#+END_SRC
+Currently the threads only work per download url. So it will still download all the files in an upload before moving onto the next one. Will look into solving that in a better way in the future.
 
 *Don't confuse "download url" with individual file urls.* Those are trivially downloaded through your web browser. This tool is to simplify downloading all the included urls in an upload on Internet Archive. Even this can be done using the Web UI quite easily. Where iadownloader shines is the ability to download full collections automatically.
 
