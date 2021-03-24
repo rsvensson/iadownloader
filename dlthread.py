@@ -25,6 +25,13 @@ class DownloadThread(threading.Thread):
                 print(f"Error: {e}")
             self.queue.task_done()
 
+    def _get_mtime_from_str(self, last_mod: str):
+        try:
+            mod_date = datetime.strptime(last_mod, "%a, %d %b %Y %H:%M:%S %Z").timetuple()
+            return int(time.mktime(mod_date))
+        except TypeError:
+            return int(time.mktime(datetime.now().timetuple()))
+
     def download_url(self, url: str):
         filename = requests.utils.unquote(url.split("/")[-1])
         if url.find("/compress/") != -1:
@@ -53,12 +60,7 @@ class DownloadThread(threading.Thread):
             block_size = 8192
             progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
             progress_bar.set_description(filename)  # Prefix filename to output
-            try:  # Try getting last modified time
-                last_mod = r.headers.get("last-modified")
-                mod_date = datetime.strptime(last_mod, "%a, %d %b %Y %H:%M:%S %Z")
-                mod_time = time.mktime(mod_date).timetuple()
-            except TypeError:
-                mod_time = time.mktime(datetime.now().timetuple())
+            mod_time = self._get_mtime_from_str(r.headers.get("last-modified"))
             mode = "wb" if resume_pos == 0 else "ab"
             with open(dlpath, mode) as fd:
                 for block in r.iter_content(block_size):
