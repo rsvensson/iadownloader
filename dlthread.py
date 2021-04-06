@@ -67,7 +67,7 @@ class DownloadThread(threading.Thread):
             r.raise_for_status()
             total_size = int(r.headers.get("content-length", 0))
             block_size = 8192
-            progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
+            progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True, leave=False)
             progress_bar.set_description(filename)  # Prefix filename to output
             mod_time = self._get_mtime_from_str(r.headers.get("last-modified"))
             mode = "wb" if resume_pos == 0 else "ab"
@@ -78,3 +78,4 @@ class DownloadThread(threading.Thread):
             progress_bar.close()
         # Set last modified time
         os.utime(dlpath, (mod_time, mod_time))
+        print(f"{filename}: Done")
