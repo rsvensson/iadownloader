@@ -43,7 +43,7 @@ You can also specify the amount of threads (up to 10):
 #+BEGIN_SRC shell
 python iadownloader.py -t 8 /download/path https://archive.org/download/<url>
 #+END_SRC
-Currently the threads only work per download url. So it will still download all the files in an upload before moving onto the next one. Will look into solving that in a better way in the future.
+It defaults to 4 threads if not specified.
 
 *Don't confuse "download url" with individual file urls.* Those are trivially downloaded through your web browser. This tool is to simplify downloading all the included urls in an upload on Internet Archive. Even this can be done using the Web UI quite easily. Where iadownloader shines is the ability to download full collections automatically.
 
