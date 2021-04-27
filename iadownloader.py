@@ -14,7 +14,7 @@ from queue import Queue
 dlurl = "https://archive.org/download/"
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="URL or path to json/csv file")
     parser.add_argument("-c", "--compressed",
@@ -106,13 +106,19 @@ def get_download_links(url: str, compressed: bool) -> list:
     return links
 
 
-def download(urls: list, output_dir: str, numthreads: int = 4):
+def enqueue(downloads: dict, numthreads: int = 4):
+    # Be reasonable
+    if numthreads > 10:
+        print("Too many threads. Setting to 10.")
+        numthreads = 10
+
     queue = Queue()
-    for url in urls:
-        queue.put(url)
+    for dlpath in downloads.keys():
+        for link in downloads[dlpath]:
+            queue.put((dlpath, link))
 
     for i in range(numthreads):
-        t = DownloadThread(queue, output_dir)
+        t = DownloadThread(queue)
         t.start()
 
     queue.join()
@@ -120,16 +126,12 @@ def download(urls: list, output_dir: str, numthreads: int = 4):
 
 def main():
     args = parse_args()
-    threads = args.threads
-    os.makedirs(args.output_dir, exist_ok=True)
-
-    if threads > 10:
-        print("Too many threads. Setting to 10.")
-        threads = 10
+    downloads = dict()
 
     if args.url.startswith("http://") or args.url.startswith("https://"):
         links = get_download_links(args.url, args.compressed)
-        download(links, args.output_dir, threads)
+        downloads[args.output_dir] = links
+        enqueue(downloads, args.threads)
         return
     elif args.url.endswith(".csv"):
         urls = csv2list(args.url)
@@ -139,15 +141,18 @@ def main():
         print("Something went wrong")
         sys.exit(1)
 
-    for url in urls:
-       if not args.compressed:
-           # Only create subdirs if we want individual files
-           dlpath = os.path.join(args.output_dir, url.split("/")[-1])
-           os.makedirs(dlpath, exist_ok=True)
-       else:
-           dlpath = args.output_dir
-       links = get_download_links(url, args.compressed)
-       download(links, dlpath, threads)
+    print("Fetching download links...")
+    for i, url in enumerate(urls):
+        print(f"\r{i+1}/{len(urls)}", end="")
+        if not args.compressed:
+            dldir = os.path.join(args.output_dir, url.split("/")[-1])
+        else:
+            dldir = args.output_dir
+        links = get_download_links(url, args.compressed)
+        downloads[dldir] = links
+    print()
+
+    enqueue(downloads, args.threads)
 
 if __name__ == "__main__":
     main()
