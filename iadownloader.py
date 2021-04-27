@@ -23,6 +23,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-o", "--output_dir", help="Path to output directory", default=os.getcwd())
     parser.add_argument("-t", "--threads", help="Number of simultaneous downloads (maximum of 10)",
                         type=int, default=4)
+    parser.add_argument("-T", "--torrent", help="Only download the torrent file if available",
+                        action="store_true")
 
     args = parser.parse_args()
 
@@ -79,7 +81,7 @@ def csv2list(path: str) -> list:
     return urls
 
 
-def get_download_links(url: str, compressed: bool) -> list:
+def get_download_links(url: str, compressed: bool, torrent: bool) -> list:
     """
     Returns the links in a download url.
     """
@@ -87,7 +89,7 @@ def get_download_links(url: str, compressed: bool) -> list:
     # Convert the details page to the download page
     url = url.replace("/details/", "/download/")
 
-    if compressed:
+    if compressed and not torrent:  # It doesn't make sense to get the compressed file if torrent is also true
         return [url.replace("/download/", "/compress/")]
 
     page = requests.get(url)
@@ -96,12 +98,16 @@ def get_download_links(url: str, compressed: bool) -> list:
     links = list()
 
     for link in rawlinks:
-        if link.startswith("http://")  or link.startswith("https://") \
-           or link.find("#maincontent") != -1 or link.find("/details/") != -1 \
-           or link.endswith("/"):
-            # Skip links that are not for file downloads
-            continue
-        links.append(dlurl + url.split("/")[-1] + "/" + link)
+        if torrent:
+            if link.endswith(".torrent"):
+                links.append(dlurl + url.split("/")[-1] + "/" + link)
+        else:
+            if link.startswith("http://")  or link.startswith("https://") \
+               or link.find("#maincontent") != -1 or link.find("/details/") != -1 \
+               or link.endswith("/"):
+               # Skip links that are not for file downloads
+               continue
+            links.append(dlurl + url.split("/")[-1] + "/" + link)
 
     return links
 
@@ -129,7 +135,7 @@ def main():
     downloads = dict()
 
     if args.url.startswith("http://") or args.url.startswith("https://"):
-        links = get_download_links(args.url, args.compressed)
+        links = get_download_links(args.url, args.compressed, args.torrent)
         downloads[args.output_dir] = links
         enqueue(downloads, args.threads)
         return
@@ -144,11 +150,11 @@ def main():
     print("Fetching download links...")
     for i, url in enumerate(urls):
         print(f"\r{i+1}/{len(urls)}", end="")
-        if not args.compressed:
+        if (not args.compressed) or (args.compressed and args.torrent):  # Ignore the compressed bool if torrent is set
             dldir = os.path.join(args.output_dir, url.split("/")[-1])
         else:
             dldir = args.output_dir
-        links = get_download_links(url, args.compressed)
+        links = get_download_links(url, args.compressed, args.torrent)
         downloads[dldir] = links
     print()
 

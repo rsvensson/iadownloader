@@ -9,7 +9,7 @@
 
 ** Usage
 #+BEGIN_SRC shell
-iadownloader.py [-h] [-c] [-o OUTPUT_DIR] [-t THREADS] url
+iadownloader.py [-h] [-c] [-o OUTPUT_DIR] [-t THREADS] [-T] url
 
 positional arguments:
   url                   URL or path to json/csv file
@@ -21,6 +21,7 @@ optional arguments:
                         Path to output directory
   -t THREADS, --threads THREADS
                         Number of simultaneous downloads (maximum of 10)
+  -T, --torrent         Only download the torrent file if available
 #+END_SRC
 
 The basic usage is to simply invoke iadownloader with a download url.
